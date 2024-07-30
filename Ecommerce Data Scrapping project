@@ -1,0 +1,76 @@
+import requests
+from bs4 import BeautifulSoup
+import csv
+
+# Path to your local HTML file
+local_html_path = r'C:\Users\sheik\OneDrive\Desktop\web scrapping project\downloaded_website\index.html'
+
+# Data to be written to CSV
+csv_data = []
+
+def extract_data_from_page(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    listings = soup.find_all('div', class_='ng-star-inserted')
+
+    page_data = []
+    for listing in listings:
+        title = None
+        main_image = None
+        additional_images = []
+        price = None
+
+        # Extract title
+        title_element = listing.find('div', class_='product-title')
+        if title_element:
+            title = title_element.text.strip()
+
+        # Extract main image and additional images from srcset
+        image_element = listing.find('img', class_='mh-100')
+        if image_element:
+            main_image = image_element.get('src', 'Main image not found')
+
+            srcset = image_element.get('srcset', '')
+            if srcset:
+                srcset_parts = srcset.split()
+                for part in srcset_parts:
+                    if part.startswith('https://'):
+                        additional_images.append(part)
+
+        additional_images = additional_images[:5]
+
+        # Extract price information
+        price_element = listing.find('span', class_='text-black fw-bolder fs-6')
+        if price_element:
+            price = price_element.text.strip()
+
+        if title and main_image and price:
+            row = [title, main_image] + additional_images + [''] * (5 - len(additional_images)) + [price]
+            page_data.append(row)
+
+            # Debugging output
+            print(f"Title: {title}")
+            print(f"Main Image: {main_image}")
+            print(f"Additional Images: {additional_images}")
+            print(f"Price: {price}")
+            print("-" * 40)
+
+    return page_data
+
+# Read the HTML content from the local file
+with open(local_html_path, 'r', encoding='utf-8') as file:
+    html_content = file.read()
+
+# Extract data from the page
+csv_data = extract_data_from_page(html_content)
+
+# Define CSV file path
+csv_file_path = r'C:\Users\sheik\OneDrive\Desktop\web scrapping project\product_data.csv'
+
+# Write the data to CSV file
+with open(csv_file_path, 'w', newline='', encoding='utf-8') as file:
+    writer = csv.writer(file)
+    header = ['Title', 'Main Image'] + [f'Img{i + 1}' for i in range(5)] + ['Price']
+    writer.writerow(header)
+    writer.writerows(csv_data)
+
+print(f"Data has been written to {csv_file_path}")
